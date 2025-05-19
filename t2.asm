@@ -1,6 +1,6 @@
 .data
-msgInicial: .string "----BLACKJACK----\n\n"
-msgMaoJogador: .string "Mão: "
+msgInicial: .string "----BLACKJACK----\n"
+msgMaoJogador: .string "\nMão: "
 msgVirgula: .string ","
 msgFechaMaoJogador: .string "]"
 msgAbreMaoJogador: .string "["
@@ -10,7 +10,7 @@ msgValorVisivel: .string " (Valor visível: "
 msgCartaDealer: .string "\nCarta do Dealer: "
 msgCompraFica: .string "\n(1) Comprar ou (2) Ficar?"
 msgLimiteUltrapassado: .string "\nInforme alguma das opções disponíveis"
-msgTemp: .string "Boa"
+msgCompraCarta: .string "Você comprou: "
 jogador: .space 40
 
 .text
@@ -139,8 +139,9 @@ inicioLogica:
     
     blt, t2, a0, limiteNumeroUltrapassado
     blt a0, t1, limiteNumeroUltrapassado
+    beq a0, t1, compraCarta
     
-    j continuaLogica
+    j fim
     
 limiteNumeroUltrapassado:
     li a7, 4
@@ -149,12 +150,90 @@ limiteNumeroUltrapassado:
     
     j inicioLogica
         
-    # TODO: Acabar a lógica do player antes de ir pro Dealer
-    
-continuaLogica:
-    li a7, 4
-    la a0, msgTemp
+compraCarta:
+    li a7, 42 # Gera um número inteiro aleatório dentro de um intervalo
+    li a0, 0 # Index 
+    li a1, 13 # Limite = [0, 12]
+
     ecall
+    
+    addi a0, a0, 1 # Limite agora = [1, 13]
+    addi a5, a0, 0 # Armazena o valor da terceira carta do jogador no registrador 'a5'
+    
+    li a7, 4 # Printa 'Você comprou: '
+    la a0, msgCompraCarta
+    ecall
+    
+    xor a0, a0, a0 # Zera a0 que está com valor de msgCompraCarta
+    add a0, a0, a5 # Atribui o valor de a5 ao a0
+    
+    li a7, 1 # Printa o a0
+    ecall
+    
+    li a7, 4 # Printa mensaggem Mao jogador
+    la a0, msgMaoJogador
+    ecall
+    
+    li a7, 4 # Printa mensagem de abre mao jogador
+    la a0, msgAbreMaoJogador
+    ecall
+    
+    xor a0, a0, a0
+    add a0, a0, a2
+    
+    li a7, 1 # Printa a primeira carta do jogador
+    ecall
+    
+    li a7, 4 # Printa o outro ']' só pra ficar visualmente mais apresentável
+    la a0,msgFechaMaoJogador
+    ecall
+    
+    li a7, 4 # Printa mensagem de abre mao jogador
+    la a0, msgAbreMaoJogador
+    ecall
+    
+    xor a0, a0, a0
+    add a0, a0, a3
+    
+    li a7, 1 # Printa a segunda carta do jogador
+    ecall
+    
+    li a7, 4 # Printa o outro ']' só pra ficar visualmente mais apresentável
+    la a0,msgFechaMaoJogador
+    ecall
+    
+    li a7, 4 # Printa mensagem de abre mao jogador
+    la a0, msgAbreMaoJogador
+    ecall
+    
+    xor a0, a0, a0
+    add a0, a0, a5
+    
+    li a7, 1 # Printa a terceira carta do jogador
+    ecall
+    
+    li a7, 4 # Printa o outro ']' só pra ficar visualmente mais apresentável
+    la a0,msgFechaMaoJogador
+    ecall
+    
+    li a7, 4 # Printa a mensagem de soma das cartas do Jogador
+    la a0, msgSomaMaoJogador
+    ecall
+    
+    xor a0, a0, a0 # Zera o registrador a0
+    add a0, a0, a2 # Armazena o valor de 'a2' em 'a0'
+    add a0, a0, a3 # Soma com o valor de 'a3'
+    add a0, a0, a5 # Adiciona o valor de 'a5' na soma
+    
+    
+    li a7, 1 # Printa a soma de fato das cartas do jogador
+    ecall
+    
+    li a7, 4 # Novamente outro print só para deixar o CLI mais agradável
+    la a0, msgFechaSoma
+    ecall
+    
+    j inicioLogica
     
 fim:
     j fim
