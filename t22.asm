@@ -1,6 +1,6 @@
 .data
-msgInicial: .string "----BLACKJACK----\n\n"
-msgMaoJogador: .string "Mão: "
+msgInicial: .string "----BLACKJACK----\n"
+msgMaoJogador: .string "\nMão: "
 msgVirgula: .string ","
 msgFechaMaoJogador: .string "]"
 msgAbreMaoJogador: .string "["
@@ -10,11 +10,14 @@ msgValorVisivel: .string " (Valor visível: "
 msgCartaDealer: .string "\nCarta do Dealer: "
 msgCompraFica: .string "\n(1) Comprar ou (2) Ficar?"
 msgLimiteUltrapassado: .string "\nInforme alguma das opções disponíveis"
-msgTemp: .string "Boa"
+msgCompraCarta: .string "Você comprou: "
 jogador: .space 40
 
 .text
 .globl main
+# a2 -> primeira carta jogador
+# a3 -> segunda carta jogador
+# a4 -> primeira carta dealer
 main:
     li a7, 4 # Printa mensagem inicial
     la a0, msgInicial
@@ -48,7 +51,12 @@ gerarcartasinicial:
     addi t0, t0, -1
     bnez t0, gerarcartasinicial
 
-    xor a0, a0, a0
+    xor t0, t0, t0
+    xor t1, t1, t1
+
+    li t1, 0
+    slli t1, t1, 2
+    add t0, t0, t1
 
     lb a0, 0(s1)
 
@@ -64,9 +72,15 @@ gerarcartasinicial:
     la a0, msgAbreMaoJogador
     ecall
 
+    xor t0, t0, t0
+    xor t1, t1, t1
     xor a0, a0, a0
 
-    lb a0, 1(s1)
+    li t1, 1
+    slli t1, t1, 2
+    add t0, t0, t1
+
+    lb a0, 0(s1)
     
     li a7, 1
     ecall # TODO: printar segundo elemento do array jogador
@@ -147,8 +161,9 @@ inicioLogica:
     
     blt t2, a0, limiteNumeroUltrapassado
     blt a0, t1, limiteNumeroUltrapassado
+    beq a0, t1, compraCarta
     
-    j continuaLogica
+    j fim
     
 limiteNumeroUltrapassado:
     li a7, 4
@@ -157,15 +172,13 @@ limiteNumeroUltrapassado:
     
     j inicioLogica
         
-    # TODO: Acabar a lógica do player antes de ir pro Dealer
-    
-continuaLogica:
-    li a7, 4
-    la a0, msgTemp
+compraCarta:
+    li a7, 42 # Gera um número inteiro aleatório dentro de um intervalo
+    li a0, 0 # Index 
+    li a1, 13 # Limite = [0, 12]
+
     ecall
     
-<<<<<<< Updated upstream
-=======
     addi a0, a0, 1 # Limite agora = [1, 13]
     addi a5, a0, 0 # Armazena o valor da terceira carta do jogador no registrador 'a5'
     
@@ -243,6 +256,217 @@ continuaLogica:
     ecall
     
     j inicioLogica
->>>>>>> Stashed changes
+
+
+main:
+    li a7, 4
+    la a0, msgInicial
+    ecall
+
+    la s1, jogador    #  array jogador[]
+    li s0, 0      # numero de cartas
+
+    # Gerar duas cartas iniciais 
+    li t0, 2
+gerarCartasIniciais:
+    li a7, 42
+    li a0, 0
+    li a1, 13
+    ecall
+    addi a0, a0, 1
+
+    slli t1, s0, 2      # offset = indice * 4
+    add t2, s1, t1     # endereço = base + offset
+    sw a0, 0(t2)     # jogador[] = carta
+
+    addi s0, s0, 1       
+    addi t0, t0, -1
+    bnez t0, gerarCartasIniciais
+
+printMao:
+    li a7, 4
+    la a0, msgMaoJogador
+    ecall
+
+    li a7, 4
+    la a0, msgAbreMaoJogador
+    ecall
+
+    li t0, 0  
+printLoop:
+    beq t0, s0, fimPrintMao
+
+    slli t1, t0, 2
+    add t2, s1, t1
+    lw a0, 0(t2)
+    li a7, 1
+    ecall
+
+    addi t0, t0, 1
+    beq t0, s0, printLoopContinue
+
+    li a7, 4
+    la a0, msgVirgula
+    ecall
+
+printLoopContinue:
+    j printLoop
+
+printMao:
+    li a7, 4
+    la a0, msgMaoJogador
+    ecall
+
+    li a7, 4
+    la a0, msgAbreMaoJogador
+    ecall
+
+    li t0, 0 
+
+printLoop:
+    beq t0, s0, fimPrintMao
+
+    slli t1, t0, 2
+    add t2, s1, t1
+    lw a0, 0(t2)
+    li a7, 1
+    ecall
+
+    addi t0, t0, 1
+    beq t0, s0, printLoopContinue
+
+    li a7, 4
+    la a0, msgVirgula
+    ecall
+
+printLoopContinue:
+    j printLoop
+
+fimPrintMao:
+    li a7, 4
+    la a0, msgFechaMaoJogador
+    ecall
+
+    # Soma das cartas
+    li a7, 4
+    la a0, msgSomaMaoJogador
+    ecall
+
+    li t0, 0      # i
+    li t3, 0      # soma
+somaLoop:
+    beq t0, s0, fimSoma
+    slli t1, t0, 2
+    add t2, s1, t1
+    lw t4, 0(t2)
+    add t3, t3, t4
+    addi t0, t0, 1
+    j somaLoop
+
+fimSoma:
+    mv a0, t3
+    li a7, 1
+    ecall
+
+    li a7, 4
+    la a0, msgFechaSoma
+    ecall
+
+    # Mostrar carta do dealer
+    li a7, 4
+    la a0, msgCartaDealer
+    ecall
+
+    li a7, 4
+    la a0, msgAbreMaoJogador
+    ecall
+
+    li a7, 42
+    li a0, 0
+    li a1, 13
+    ecall
+    addi a0, a0, 1
+    mv a4, a0
+
+    li a7, 1
+    ecall
+
+    li a7, 4
+    la a0, msgFechaMaoJogador
+    ecall
+
+    li a7, 4
+    la a0, msgValorVisivel
+    ecall
+
+    mv a0, a4
+    li a7, 1
+    ecall
+
+    li a7, 4
+    la a0, msgFechaSoma
+    ecall
+
+limiteNumeroUltrapassado:
+ li a7, 4
+ la a0, msgLimiteUltrapassado
+ ecall
+ 
+
+ 
+
+inicioLogica:
+    li a7, 4
+    la a0, msgCompraFica
+    ecall
+
+    li a7, 5
+    ecall  # entrada do jogador
+    mv t6, a0
+
+    li t1, 1
+    li t2, 2
+
+    blt t6, t1, limiteNumeroUltrapassado
+    bgt t6, t2, limiteNumeroUltrapassado
+    beq t6, t1, compraCarta
+
+    j fim
+
+limiteNumeroUltrapassado:
+    li a7, 4
+    la a0, msgLimiteUltrapassado
+    ecall
+    j inicioLogica
+
+
+# comprar carta
+
+compraCarta:
+
+li a7, 42
+li a0, 0
+li a1, 13
+ecall
+addi a0,a0,1
+
+# salvar array
+
+slli t1, s0,2
+add tt2, s1, t1
+sw a0, 0(t2)
+addi s0, s0, 1
+
+ # mostarar carta comprada
+ li a7, 4
+ la a0, msgCompraCarta
+ ecall
+
+ lw a0, o(t2)
+ li a7, 1
+ ecall
+
+ j printMao
+    
 fim:
    j fim
