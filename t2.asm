@@ -1,248 +1,425 @@
 .data
-msgInicial: .string "----BLACKJACK----\n\n"
-msgMaoJogador: .string "Mão: "
-msgVirgula: .string ","
-msgFechaMaoJogador: .string "]"
-msgAbreMaoJogador: .string "["
-msgSomaMaoJogador: .string " (Soma: "
-msgFechaSoma: .string ")"
-msgValorVisivel: .string " (Valor visível: "
-msgCartaDealer: .string "\nCarta do Dealer: "
-msgCompraFica: .string "\n(1) Comprar ou (2) Ficar?"
-msgLimiteUltrapassado: .string "\nInforme alguma das opções disponíveis"
-msgTemp: .string "Boa"
-jogador: .space 40
+    msgBlackJack:    .string "\n=== BLACKJACK ===\n\n"
+    msgJogadorRecebe:     .string "Player: "
+    msgDealerRevela:      .string "Dealer: "
+    msgCartaOculta:      .string " e uma carta oculta\n"
+    msgMao:      .string "Sua mão: "
+    simboloMais:        .string " + "
+    simboloIgual:       .string " = "
+    quebraLinha:      .string "\n"
+    msgOpcoesJogo:     .string "\n(1 - Pedir Carta, 2 - Parar): "
+    msgDealerRevelaMao:  .string "\nMão Dealer: "
+    msgDealerPedeCarta: .string "\nDealer continua pedindo cartas...\n"
+    msgDealerRecebe: .string "Dealer recebe: "
+    msgCartasDealer:  .string "Dealer possui: "
+    msgEstourou:      .string "\nVocê estourou! Dealer vence!! :(\n"
+    msgDealerEstourou:      .string "\nDealer estourou! Você vence!! :)\n"
+    msgVenceuCom: .string "\nVocê venceu com :)"
+    msgDealerVenceuCom: .string "\nO dealer venceu com :("
+    msgConta:      .string " contra "
+    simboloExclamacao:  .string "!\n"
+    msgEmpate:      .string "\nEmpate! :|\n"
+    msgJogarNovamente: .string "\nJogar novamente? (1 - Sim, 2 - Não): "
+    msgValete:     .string "Valete"
+    msgDama:       .string "Dama"
+    msgRei:        .string "Rei"
+    msgAs:         .string "As"
 
 .text
 .globl main
 main:
-    li a7, 4 # Printa mensagem inicial
-    la a0, msgInicial
-    ecall
-    
-    li a7, 4 # Printa mensaggem Mao jogador
-    la a0, msgMaoJogador
-    ecall
-    
-    li a7, 4 # Printa mensagem de abre mao jogador
-    la a0, msgAbreMaoJogador
-    ecall
-
-    la s1, jogador # array inicial do jogador 
-    li s0,0   # numero de cartas
-
-    li t0, 2 # gera duas cartas inicial
-
-gerarcartasinicial:
-    li a7, 42
-    li a0, 0 
-    li a1, 13
-    ecall
-    addi a0, a0, 1
-
-    slli t1,s0,2  # offset = indice * 4
-    add t2,s1,t1  # endereço = base + offset
-    sb a0,0(t2) # jogador[] = carta
-
-    addi s0, s0, 1
-    addi t0, t0, -1
-    bnez t0, gerarcartasinicial
-
-    xor a0, a0, a0
-
-    lb a0, 0(s1)
-
-    li a7, 1 # Printar o número inteiro que está em a0
-    ecall # TODO: printar primeiro elemento do array jogador
-    
-    li a7, 4 # Printa o outro ']' só pra ficar visualmente mais apresentável
-    la a0,msgFechaMaoJogador
-    ecall
-    
-    # Aqui só repito o mesmo processo para a outra carta do jogador
-    li a7, 4 
-    la a0, msgAbreMaoJogador
-    ecall
-
-    xor a0, a0, a0
-
-    lb a0, 1(s1)
-    
-    li a7, 1
-    ecall # TODO: printar segundo elemento do array jogador
-    
+    la a0, msgBlackJack
     li a7, 4
-    la a0,msgFechaMaoJogador
     ecall
-    
-    li a7, 4 # Printa a mensagem de soma das cartas do Jogador
-    la a0, msgSomaMaoJogador
-    ecall
-    
-    xor a0, a0, a0 # Zera o registrador a0
-    add a0, a0, a2 # Armazena o valor de 'a2' em 'a0'
-    add a0, a0, a3 # Soma com o valor de 'a3'
-    
-    
-    li a7, 1 # Printa a soma de fato das cartas do jogador
-    ecall
-    
-    li a7, 4 # Novamente outro print só para deixar o CLI mais agradável
-    la a0, msgFechaSoma
-    ecall
-    
-    li a7, 4 # Printa mensagem da carta do Dealer
-    la a0, msgCartaDealer
-    ecall 
-    
-    li a7, 4 # Vou reutilizar os prints do jogador
-    la a0, msgAbreMaoJogador
-    ecall
-    
-    li a7, 42 # Gera um número inteiro aleatório dentro de um intervalo
-    li a0, 0 # Index 
-    li a1, 13 # Limite = [0, 12]
 
+    # Inicializa o estado do jogo
+    li s0, 0       # Total do jogador
+    li s1, 0       # Total do dealer
+    li s6, 2       # Contador de cartas do jogador
+    li s7, 0       # Zera contador de Ases do jogador
+    li s8, 0       # Zera contador de Ases do dealer
+
+inicio_jogo:
+    # Primeira carta do jogador
+    jal ra, hit
+    mv s2, a0      # Salva primeira carta
+    jal ra, calculo_total_jogador
+
+    # Segunda carta do jogador
+    jal ra, hit
+    mv s3, a0      # Salva segunda carta
+    jal ra, calculo_total_jogador
+
+    # Mostra cartas do jogador
+    la a0, msgJogadorRecebe
+    li a7, 4
     ecall
-    
-    addi a0, a0, 1 # Limite agora = [1, 13]
-    addi a4, a0, 0 # Armazena o valor da primeira carta do dealer no registrador 'a4'
-    
-    li a7, 1 # Printar o número inteiro que está em a0
+
+    mv a0, s2
+    jal ra, print_cartas
+
+    la a0, simboloMais
+    li a7, 4
     ecall
-    
-    li a7, 4 # Printa o outro ']' só pra ficar visualmente mais apresentável
-    la a0,msgFechaMaoJogador
+
+    mv a0, s3
+    jal ra, print_cartas
+
+    la a0, simboloIgual
+    li a7, 4
     ecall
-    
-    li a7, 4 # Printa mensagem de valor visível do dealer
-    la a0,msgValorVisivel
-    ecall
-    
-    xor a0, a0, a0 # Zera o valor de a0
-    add a0, a0, a4 # Armazena o valor de a4 em a0 (a4->a0)
-    
+
+    mv a0, s0
     li a7, 1
     ecall
-    
-    li a7, 4 # Print pra bonito
-    la a0,msgFechaSoma
-    ecall
-    
-inicioLogica:     
-  
-    li a7, 4 # Print opções para o Usuário
-    la a0, msgCompraFica
-    ecall
-     
-    li a7, 5 # Espera uma resposta de inteiros
-    ecall
-    
-    xor t1, t1, t1 # Tenho que zerar o t1 e o t2 pq se o usuário informar errado e voltar pra cá eles são podem somar a mais
-    xor t2, t2, t2
-    
-    # if a0 > 2 tem que dar erro do mesmo jeito que if a0 < 1 também tem que dar 
-    addi t1, t1, 1
-    addi t2, t2, 2
-    
-    blt t2, a0, limiteNumeroUltrapassado
-    blt a0, t1, limiteNumeroUltrapassado
-    
-    j continuaLogica
-    
-limiteNumeroUltrapassado:
+
+    la a0, quebraLinha
     li a7, 4
-    la a0, msgLimiteUltrapassado
     ecall
-    
-    j inicioLogica
-        
-    # TODO: Acabar a lógica do player antes de ir pro Dealer
-    
-continuaLogica:
+
+    # Primeira carta do dealer
+    jal ra, hit
+    mv s4, a0      # Salva primeira carta do dealer
+    jal ra, caluculo_total_dealer
+
+    # Segunda carta do dealer (oculta)
+    jal ra, hit
+    mv s5, a0      # Salva segunda carta
+    jal ra, caluculo_total_dealer
+
+    # Mostra apenas primeira carta do dealer
+    la a0, msgDealerRevela
     li a7, 4
-    la a0, msgTemp
     ecall
-    
-<<<<<<< Updated upstream
-=======
-    addi a0, a0, 1 # Limite agora = [1, 13]
-    addi a5, a0, 0 # Armazena o valor da terceira carta do jogador no registrador 'a5'
-    
-    li a7, 4 # Printa 'Você comprou: '
-    la a0, msgCompraCarta
+
+    mv a0, s4
+    jal ra, print_cartas
+
+    la a0, msgCartaOculta
+    li a7, 4
     ecall
-    
-    xor a0, a0, a0 # Zera a0 que está com valor de msgCompraCarta
-    add a0, a0, a5 # Atribui o valor de a5 ao a0
-    
-    li a7, 1 # Printa o a0
+
+player_turno:
+    la a0, msgOpcoesJogo
+    li a7, 4
     ecall
-    
-    li a7, 4 # Printa mensaggem Mao jogador
-    la a0, msgMaoJogador
+
+    li a7, 5
     ecall
-    
-    li a7, 4 # Printa mensagem de abre mao jogador
-    la a0, msgAbreMaoJogador
+
+    li t0, 1
+    beq a0, t0, jogador
+    j dealer_turno
+
+jogador:
+    # Nova carta
+    jal ra, hit
+    mv t1, a0      # Salva carta recebida
+    jal ra, calculo_total_jogador
+
+    # Mostra carta recebida
+    la a0, msgJogadorRecebe
+    li a7, 4
     ecall
-    
-    xor a0, a0, a0
-    add a0, a0, a2
-    
-    li a7, 1 # Printa a primeira carta do jogador
+
+    mv a0, t1
+    jal ra, print_cartas
+
+    la a0, quebraLinha
+    li a7, 4
     ecall
-    
-    li a7, 4 # Printa o outro ']' só pra ficar visualmente mais apresentável
-    la a0,msgFechaMaoJogador
+
+    # Mostra mão completa
+    la a0, msgMao
+    li a7, 4
     ecall
-    
-    li a7, 4 # Printa mensagem de abre mao jogador
-    la a0, msgAbreMaoJogador
+
+    # Mostra primeira carta
+    mv a0, s2
+    jal ra, print_cartas
+
+    # Mostra segunda carta
+    la a0, simboloMais
+    li a7, 4
     ecall
-    
-    xor a0, a0, a0
-    add a0, a0, a3
-    
-    li a7, 1 # Printa a segunda carta do jogador
+
+    mv a0, s3
+    jal ra, print_cartas
+
+    la a0, simboloMais
+    li a7, 4
     ecall
-    
-    li a7, 4 # Printa o outro ']' só pra ficar visualmente mais apresentável
-    la a0,msgFechaMaoJogador
+
+    mv a0, t1
+    jal ra, print_cartas
+
+    la a0, simboloIgual
+    li a7, 4
     ecall
-    
-    li a7, 4 # Printa mensagem de abre mao jogador
-    la a0, msgAbreMaoJogador
+
+    mv a0, s0
+    li a7, 1
     ecall
-    
-    xor a0, a0, a0
-    add a0, a0, a5
-    
-    li a7, 1 # Printa a terceira carta do jogador
+
+    la a0, quebraLinha
+    li a7, 4
     ecall
-    
-    li a7, 4 # Printa o outro ']' só pra ficar visualmente mais apresentável
-    la a0,msgFechaMaoJogador
+
+    # Verifica se estourou
+    li t0, 21
+    bgt s0, t0, jogador_perdeu
+
+    addi s6, s6, 1  # Incrementa contador de cartas
+    j player_turno
+
+jogador_perdeu:
+    la a0, msgEstourou
+    li a7, 4
     ecall
-    
-    li a7, 4 # Printa a mensagem de soma das cartas do Jogador
-    la a0, msgSomaMaoJogador
+    j jogo_termina
+
+dealer_turno:
+    # Revela mão completa do dealer
+    la a0, msgDealerRevelaMao
+    li a7, 4
     ecall
-    
-    xor a0, a0, a0 # Zera o registrador a0
-    add a0, a0, a2 # Armazena o valor de 'a2' em 'a0'
-    add a0, a0, a3 # Soma com o valor de 'a3'
-    add a0, a0, a5 # Adiciona o valor de 'a5' na soma
-    
-    
-    li a7, 1 # Printa a soma de fato das cartas do jogador
+
+    mv a0, s1
+    li a7, 1
     ecall
-    
-    li a7, 4 # Novamente outro print só para deixar o CLI mais agradável
-    la a0, msgFechaSoma
+
+    la a0, quebraLinha
+    li a7, 4
     ecall
-    
-    j inicioLogica
->>>>>>> Stashed changes
-fim:
-   j fim
+
+dealer:
+    li t0, 17
+    bge s1, t0, verifica_vencedor
+
+    # Dealer pede carta
+    la a0, msgDealerPedeCarta
+    li a7, 4
+    ecall
+
+    jal ra, hit
+    jal ra, caluculo_total_dealer
+
+    la a0, msgCartasDealer
+    li a7, 4
+    ecall
+
+    mv a0, s1
+    li a7, 1
+    ecall
+
+    la a0, quebraLinha
+    li a7, 4
+    ecall
+
+    # Verifica se dealer estourou
+    li t0, 21
+    bgt s1, t0, dealer_perdeu
+
+    j dealer
+
+dealer_perdeu:
+    la a0, msgDealerEstourou
+    li a7, 4
+    ecall
+    j jogo_termina
+
+verifica_vencedor:
+    bgt s0, s1, jogador_vence
+    bgt s1, s0, dealer_vence
+    j empate
+
+jogador_vence:
+    la a0, msgVenceuCom
+    li a7, 4
+    ecall
+
+    mv a0, s0
+    li a7, 1
+    ecall
+
+    la a0, msgConta
+    li a7, 4
+    ecall
+
+    mv a0, s1
+    li a7, 1
+    ecall
+
+    la a0, simboloExclamacao
+    li a7, 4
+    ecall
+    j jogo_termina
+
+dealer_vence:
+    la a0, msgDealerVenceuCom
+    li a7, 4
+    ecall
+
+    mv a0, s1
+    li a7, 1
+    ecall
+
+    la a0, msgConta
+    li a7, 4
+    ecall
+
+    mv a0, s0
+    li a7, 1
+    ecall
+
+    la a0, simboloExclamacao
+    li a7, 4
+    ecall
+    j jogo_termina
+
+empate:
+    la a0, msgEmpate
+    li a7, 4
+    ecall
+    j jogo_termina
+
+jogo_termina:
+    la a0, msgJogarNovamente
+    li a7, 4
+    ecall
+
+    li a7, 5
+    ecall
+
+    li t0, 1
+    beq a0, t0, main
+    li a7, 10
+    ecall
+
+# Função para dar carta (1-13)
+hit:
+    li a7, 42       # Número aleatório
+    li a1, 13       # Limite superior
+    ecall
+    addi a0, a0, 1  # Intervalo 1-13
+
+    # Converte valor para pontuação
+    mv t6, a0       # Salva valor original
+
+    # Verifica se é um Ás
+    li t0, 1
+    beq t6, t0, e_as
+
+    # Verifica se é uma carta de figura (11, 12, 13)
+    li t0, 10
+    bgt t6, t0, realez
+
+    # Se não é Ás nem figura, mantém o valor original
+    mv a0, t6
+    j fim_jogada
+
+e_as:
+    li a0, 11       # Ás começa valendo 11
+    j fim_jogada
+
+realez:
+    li a0, 10       # Valete (11), Dama (12) e Rei (13) valem 10
+
+fim_jogada:
+    ret
+
+# Função para ajustar o total do jogador
+calculo_total_jogador:
+    # Se for um Ás
+    li t0, 11
+    bne a0, t0, n_as_jogador
+    addi s7, s7, 1      # Incrementa contador de Ases
+
+n_as_jogador:
+    add s0, s0, a0      # Adiciona valor ao total
+
+    # Verifica se precisa ajustar Ases
+    li t0, 21
+as_jogador:
+    ble s0, t0, termina_calculo_jogador  # Se total <= 21, não precisa ajustar
+    beqz s7, termina_calculo_jogador     # Se não tem Ases, não pode ajustar
+    addi s0, s0, -10    # Converte um Ás de 11 para 1 (reduz 10 pontos)
+    addi s7, s7, -1     # Decrementa contador de Ases
+    j as_jogador           # Continua ajustando se necessário
+
+termina_calculo_jogador:
+    ret
+
+# Função para ajustar o total do dealer
+caluculo_total_dealer:
+    # Se for um Ás
+    li t0, 11
+    bne a0, t0, n_as_dealer
+    addi s8, s8, 1      # Incrementa contador de Ases
+
+n_as_dealer:
+    add s1, s1, a0      # Adiciona valor ao total
+
+    # Verifica se precisa ajustar Ases
+    li t0, 21
+as_dealer:
+    ble s1, t0, termina_calculo_dealer   # Se total <= 21, não precisa ajustar
+    beqz s8, termina_calculo_dealer      # Se não tem Ases, não pode ajustar
+    addi s1, s1, -10    # Converte um Ás de 11 para 1 (reduz 10 pontos)
+    addi s8, s8, -1     # Decrementa contador de Ases
+    j as_dealer            # Continua ajustando se necessário
+
+termina_calculo_dealer:
+    ret
+
+# Função para mostrar o nome da carta
+print_cartas:
+    mv t6, a0       # Salva o valor da carta
+
+    # Se for Ás (11)
+    li t0, 11
+    beq t6, t0, as
+
+    # Se for Valete (11)
+    li t0, 11
+    beq a0, t0, valete
+
+    # Se for Dama (12)
+    li t0, 12
+    beq a0, t0, dama
+
+    # Se for Rei (13)
+    li t0, 13
+    beq a0, t0, rei
+
+    # Se for carta normal, mostra o número
+    mv a0, t6
+    li a7, 1
+    ecall
+    j fim_print_cartas
+
+as:
+    la a0, msgAs
+    li a7, 4
+    ecall
+    j fim_print_cartas
+
+valete:
+    la a0, msgValete
+    li a7, 4
+    ecall
+    j fim_print_cartas
+
+dama:
+    la a0, msgDama
+    li a7, 4
+    ecall
+    j fim_print_cartas
+
+rei:
+    la a0, msgRei
+    li a7, 4
+    ecall
+
+fim_print_cartas:
+    ret
