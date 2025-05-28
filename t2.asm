@@ -271,7 +271,7 @@ dealer_vence:
     mv a0, s0
     li a7, 1
     ecall
-
+    
     la a0, simboloExclamacao
     li a7, 4
     ecall
